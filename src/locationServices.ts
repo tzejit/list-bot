@@ -7,6 +7,9 @@ export async function getNearby(payload, api: string, userCollection:Realm.Servi
     const chatId = payload.chat.id
     const lat = Number(payload.location.latitude)
     const lon = Number(payload.location.longitude)
+    if (!("reply_to_message" in payload)) {
+        await sendMessage(chatId, "You list is empty!", api)
+    }
     const reply = payload.reply_to_message.text.split(" ")
     let threshold = 999999999
     if (!isNaN(Number(reply[reply.length - 1].replace("m", '')))) {
