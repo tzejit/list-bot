@@ -1,28 +1,8 @@
-import * as Realm from 'realm-web';
-
-type Document = globalThis.Realm.Services.MongoDB.Document;
-
-interface ListData extends Document {
-	_id: Realm.BSON.UUID;
-	name: string;
-	list: string[];
-	users: string[];
-}
-
-interface UserData extends Document {
-	_id: string;
-	list_ids: Realm.BSON.UUID[];
-	list_names: string[];
-	active_id: Realm.BSON.UUID;
-}
-
-let App: Realm.App;
-const ListId = Realm.BSON.UUID;
-
-async function sendMessage(chat_id: string, message: string, api_key: string) {
-	const url = `https://api.telegram.org/bot${api_key}/sendMessage?chat_id=${chat_id}&text=${encodeURIComponent(message)}`
-	await fetch(url).then(resp => resp.json());
-}
+import { handleCallback } from './callback.ts';
+import { sendMessage } from './telegramApi.ts';
+import { initConnection, ListId } from './mongodb.ts'
+import { Cuisine, generateInputData, InputData, UserFields } from './models.ts';
+import { generateInlineKeyboardMarkup } from './utils.ts';
 
 export default {
 	async fetch(request, env) {
@@ -32,24 +12,18 @@ export default {
 		}
 
 		const payload = await request.json()
+		const [listCollection, userCollection] = await initConnection(env.MONGO_ID, env.DATA_KEY)
 
-		if (!('entities' in payload.message)) {
+
+		if ('callback_query' in payload) {
+			await handleCallback(payload, env.API_KEY, listCollection, userCollection)
 			return new Response()
 		}
 
-		App = App || new Realm.App(env.MONGO_ID);
-
-		try {
-			const credentials = Realm.Credentials.apiKey(env.DATA_KEY);
-			// Attempt to authenticate
-			var user = await App.logIn(credentials);
-			var client = user.mongoClient('mongodb-atlas');
-		} catch (err) {
-			return new Response('Error in connecting to DB')
+		if (!payload.message || !('entities' in payload.message)) {
+			return new Response()
 		}
 
-		const listCollection = client.db('listBot').collection<ListData>('listData');
-		const userCollection = client.db('listBot').collection<UserData>('userData');
 
 		const chatId: string = payload.message.chat.id
 		const command: string = payload.message.text.split(" ")[0]
@@ -119,7 +93,7 @@ export default {
 				if (!listInfo || !('listInfo' in listInfo)) {
 					await sendMessage(chatId, "Error: List does not exist", env.API_KEY);
 				} else {
-					let message = listInfo.listInfo.list.length == 0 ? "No lists items found!" : listInfo.listInfo.list.map((v, i) => `(${i + 1}) ${v}`).join("\n");
+					let message = listInfo.listInfo.list.length == 0 ? "No lists items found!" : listInfo.listInfo.list.map((v: InputData, i: number) => `(${i + 1}) ${v[UserFields.Name]}`).join("\n");
 					await sendMessage(chatId, listInfo.listInfo.name + "\n" + message, env.API_KEY);
 				}
 			} break
@@ -153,24 +127,23 @@ export default {
 				await sendMessage(chatId, user ? 'Updated active list' : 'Error, list does not exist', env.API_KEY)
 			} break
 			case "/add": {
-
 				if (!argsRaw) {
 					await sendMessage(chatId, 'Item to add needed', env.API_KEY)
 					return new Response();
 				}
 
-				let list_id = (await userCollection.findOne({
-					_id: chatId
-				}))?.active_id;
+				const p: string = argsRaw.split(" ")[0]
+				const n: string = argsRaw.split(" ").slice(1).join(" ")
 
-				await listCollection.updateOne({
-					_id: list_id,
-				}, {
-					$push: {
-						list: argsRaw
-					}
-				});
-				await sendMessage(chatId, list_id ? 'List updated' : 'Error no list found', env.API_KEY)
+				if (!p || !n) {
+					await sendMessage(chatId, 'Postal code and name needed', env.API_KEY)
+					return new Response();
+				}
+
+
+				let data: InputData = generateInputData(p, n)
+				const opts = generateInlineKeyboardMarkup(Cuisine, data, UserFields.Cuisine)
+				await sendMessage(chatId, "Please select the type of cuisine", env.API_KEY, JSON.stringify(opts));
 			} break
 			case "/remove": {
 
