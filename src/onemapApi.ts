@@ -11,6 +11,10 @@ export interface LocationData {
     LONGITUDE: string
 }
 
+export interface MrtData extends LocationData {
+    CODE: string[]
+}
+
 interface OneMapResponse {
     found: number,
     totalNumPages: number,

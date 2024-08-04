@@ -1,11 +1,12 @@
-import { LocationData } from "./onemapApi";
+import { LocationData, MrtData } from "./onemapApi";
 
 export enum UserFields {
     PostalCode = 'p',
     Name = 'n',
     Cuisine = 'c',
     LocationType = 't',
-    LocationData = 'd'
+    LocationData = 'd',
+    NearestMrt = 'm'
 }
 
 export enum Cuisine {
@@ -33,6 +34,7 @@ export interface InputData {
     [UserFields.Cuisine]?: Cuisine;
     [UserFields.LocationType]?: LocationType;
     [UserFields.LocationData]?: LocationData;
+    [UserFields.NearestMrt]?: MrtData;
 }
 
 export function generateInputData(p: string, n: string): InputData {
