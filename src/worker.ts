@@ -3,6 +3,7 @@ import { sendMessage } from './telegramApi.ts';
 import { initConnection, ListId } from './mongodb.ts'
 import { Cuisine, generateInputData, InputData, UserFields } from './models.ts';
 import { generateInlineKeyboardMarkup } from './utils.ts';
+import { getNearby } from './locationServices.ts';
 
 export default {
 	async fetch(request, env) {
@@ -20,7 +21,15 @@ export default {
 			return new Response()
 		}
 
-		if (!payload.message || !('entities' in payload.message)) {
+		await sendMessage(payload.message.chat.id, JSON.stringify(payload), env.API_KEY)
+
+
+		if (!payload.message) {
+			return new Response()
+		}
+
+		if ('location' in payload.message) {
+			await getNearby(payload.message, env.API_KEY, userCollection)
 			return new Response()
 		}
 
@@ -28,7 +37,6 @@ export default {
 		const chatId: string = payload.message.chat.id
 		const command: string = payload.message.text.split(" ")[0]
 		const argsRaw: string = payload.message.text.split(" ").slice(1).join(" ")
-
 		switch (command) {
 			case "/new": {
 				if (!argsRaw) {
@@ -139,7 +147,6 @@ export default {
 					await sendMessage(chatId, 'Postal code and name needed', env.API_KEY)
 					return new Response();
 				}
-
 
 				let data: InputData = generateInputData(p, n)
 				const opts = generateInlineKeyboardMarkup(Cuisine, data, UserFields.Cuisine)
@@ -261,6 +268,17 @@ export default {
 				})
 
 				await sendMessage(chatId, 'List successfully imported! Active list set to imported list', env.API_KEY)
+			} break
+			case "/nearby": {
+				let dist = Number(argsRaw)
+				if (isNaN(dist)) {
+					dist = 0
+				}
+				let text = `Please send your location to find nearby places`
+				if (dist != 0) {
+					text += ` within ${dist}m`
+				}
+				await sendMessage(chatId, text ,env.API_KEY, JSON.stringify({keyboard: [[{text:'Send location', resize_keyboard: true, request_location: true}]]}))
 			} break
 		}
 

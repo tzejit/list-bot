@@ -1,3 +1,5 @@
+import { Cuisine, InputData, LocationType, UserFields } from "./models"
+
 export function generateInlineKeyboardMarkup(enumType: any, data: object, jsonKey: string) {
     
     let arr = Object.values(enumType)
@@ -41,4 +43,10 @@ export function calcDist(lat1: number, lon1: number, lat2: number, lon2: number)
 
     const d = R * c; // in metres
     return d
+}
+
+export function locationDistanceParser(id : string, dist: number, data: InputData) {
+    const cuisineType = Object.values(Cuisine)[Number(data[UserFields.Cuisine]!)]
+    const locationType = Object.values(LocationType)[Number(data[UserFields.LocationType]!)]
+    return `<u>${data[UserFields.Name]}</u> (${Math.round(dist)}m)\nID: ${id}\nCuisine: ${cuisineType}\nType: ${locationType}`
 }

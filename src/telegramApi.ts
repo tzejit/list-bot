@@ -5,7 +5,8 @@ export async function sendMessage(chat_id: string, message: string, api_key: str
         body: JSON.stringify({
             chat_id: chat_id,
             text: message,
-            reply_markup: reply_markup
+            reply_markup: reply_markup,
+            parse_mode: "HTML"
         }),
         headers: {
             'Content-Type': 'application/json',
