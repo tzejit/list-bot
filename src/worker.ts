@@ -2,7 +2,7 @@ import { handleCallback } from './callback.ts';
 import { sendMessage } from './telegramApi.ts';
 import { initConnection, ListId } from './mongodb.ts'
 import { Cuisine, generateInputData, InputData, UserFields } from './models.ts';
-import { generateInlineKeyboardMarkup } from './utils.ts';
+import { generateInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { getNearby } from './locationServices.ts';
 
 export default {
@@ -101,7 +101,7 @@ export default {
 				if (!listInfo || !('listInfo' in listInfo)) {
 					await sendMessage(chatId, "Error: List does not exist", env.API_KEY);
 				} else {
-					let message = listInfo.listInfo.list.length == 0 ? "No lists items found!" : listInfo.listInfo.list.map((v: InputData, i: number) => `(${i + 1}) ${v[UserFields.Name]}`).join("\n");
+					let message = listInfo.listInfo.list.length == 0 ? "No lists items found!" : listInfo.listInfo.list.map((v: InputData, i: number) => locationViewParser(i, v)).join("\n");
 					await sendMessage(chatId, listInfo.listInfo.name + "\n" + message, env.API_KEY);
 				}
 			} break

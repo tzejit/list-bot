@@ -30,6 +30,7 @@ export async function handleCallback(payload, api: string, listCollection:Realm.
             }
         })
 
+        nearestMrt.DISTANCE = nearestDist
         data[UserFields.NearestMrt] = nearestMrt
 
         let list_id = (await userCollection.findOne({

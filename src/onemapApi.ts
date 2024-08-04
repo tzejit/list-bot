@@ -12,7 +12,8 @@ export interface LocationData {
 }
 
 export interface MrtData extends LocationData {
-    CODE: string[]
+    CODE: string[],
+    DISTANCE?: number
 }
 
 interface OneMapResponse {

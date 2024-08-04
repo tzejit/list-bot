@@ -50,3 +50,12 @@ export function locationDistanceParser(id : string, dist: number, data: InputDat
     const locationType = Object.values(LocationType)[Number(data[UserFields.LocationType]!)]
     return `<u>${data[UserFields.Name]}</u> (${Math.round(dist)}m)\nID: ${id}\nCuisine: ${cuisineType}\nType: ${locationType}`
 }
+
+export function locationViewParser(id: number, data: InputData) {
+    const cuisineType = Object.values(Cuisine)[Number(data[UserFields.Cuisine]!)]
+    const locationType = Object.values(LocationType)[Number(data[UserFields.LocationType]!)]
+    const mrtData = data[UserFields.NearestMrt]!
+    let mrtName = mrtData.SEARCHVAL.split("MRT STATION")[0].trim().toLowerCase()
+    let mrtCode = mrtData.CODE.join('/')
+    return `<u>${id}. ${data[UserFields.Name]}</u>\nCuisine: ${cuisineType}\nType: ${locationType}\n${Math.round(mrtData.DISTANCE!)}m from ${mrtName} (${mrtCode})`
+}
