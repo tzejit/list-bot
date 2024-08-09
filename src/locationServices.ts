@@ -32,7 +32,7 @@ export async function getNearby(payload, api: string, userCollection: Realm.Serv
         }
     ]))[0];
     if (!listInfo || !('listInfo' in listInfo)) {
-        await sendMessage(chatId, "Error: List does not exist", api, JSON.stringify({ force_reply: false }));
+        await sendMessage(chatId, "Error: List does not exist", api, JSON.stringify({ remove_keyboard: true }));
     } else {
         const data: InputData[] = listInfo.listInfo.list
         const output: any[] = []
@@ -44,7 +44,7 @@ export async function getNearby(payload, api: string, userCollection: Realm.Serv
         })
         output.sort((a, b) => a.dist - b.dist)
         const text = output.length != 0 ? output.map(o => locationDistanceParser(o.id + 1, o.dist, o.data)).join('\n\n') : "No places found!"
-        await sendMessage(chatId, text, api, JSON.stringify({ force_reply: false }));
+        await sendMessage(chatId, text, api, JSON.stringify({ remove_keyboard: true }));
     }
 }
 
@@ -79,7 +79,7 @@ export async function getDirection(payload, api: string, userCollection: Realm.S
         const locationData = data[UserFields.LocationData]!
         const directionData = await getMapDirection(`${lat},${lon}`, `${locationData.LATITUDE},${locationData.LONGITUDE}`, email, password)
         const msg = `<u>Directions</u>\n` + directionParser(directionData, data[UserFields.Name]) + `\n\nAlternatively, click on the map below to open google maps`
-        await sendMessage(chatId, msg, api, JSON.stringify({ force_reply: false }))
-        await sendLocation(chatId, Number(locationData.LATITUDE), Number(locationData.LONGITUDE), api, JSON.stringify({ force_reply: false }));
+        await sendMessage(chatId, msg, api, JSON.stringify({ remove_keyboard: true }))
+        await sendLocation(chatId, Number(locationData.LATITUDE), Number(locationData.LONGITUDE), api, JSON.stringify({ remove_keyboard: true }));
     }
 }

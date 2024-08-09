@@ -62,7 +62,7 @@ export async function getMapDirection(start: string, end: string, email: string,
     const token = await getToken(email, password)
     const date = new Date().toLocaleDateString('en-us', {month: '2-digit', day: '2-digit', year: 'numeric'}).replace(/\//g, "-")
     const time = new Date().toLocaleTimeString('en-gb')
-    const url = `https://www.onemap.gov.sg/api/public/routingsvc/route?start=${start}&end=${end}&routeType=pt&date=${date}&time=${time}&mode=TRANSIT&maxWalkDistance=500&numItineraries=1`
+    const url = `https://www.onemap.gov.sg/api/public/routingsvc/route?start=${start}&end=${end}&routeType=pt&date=${date}&time=${time}&mode=TRANSIT&maxWalkDistance=500&numItineraries=2`
 	const response = await fetch(url, {
         method: 'GET',
         headers: {
