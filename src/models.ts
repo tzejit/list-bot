@@ -29,7 +29,7 @@ export enum LocationType {
 }
 
 export interface InputData {
-    [UserFields.PostalCode]: number;
+    [UserFields.PostalCode]: string;
     [UserFields.Name]: string;
     [UserFields.Cuisine]?: Cuisine;
     [UserFields.LocationType]?: LocationType;
@@ -39,7 +39,7 @@ export interface InputData {
 
 export function generateInputData(p: string, n: string): InputData {
     return {
-        [UserFields.PostalCode]: Number(p),
+        [UserFields.PostalCode]: p,
         [UserFields.Name]: n
     }
 }

@@ -51,5 +51,5 @@ export async function handleCallback(payload, api: string, listCollection:Realm.
     const opts = generateInlineKeyboardMarkup(LocationType, data, UserFields.LocationType)
  
     await answerCallback(payload.callback_query.id, "Selected", api)
-    await sendMessage(payload.callback_query.message.chat.id, "type", api, JSON.stringify(opts));
+    await sendMessage(payload.callback_query.message.chat.id, "Please select the location type", api, JSON.stringify(opts));
 }
