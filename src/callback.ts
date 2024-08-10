@@ -2,11 +2,11 @@ import { sendMessage, answerCallback } from './telegramApi.ts';
 import { getMapData, MrtData } from './onemapApi.ts'
 import { InputData, LocationType, UserFields } from './models.ts';
 import { calcDist, generateInlineKeyboardMarkup } from './utils.ts';
-import { ListData, UserData } from './mongodb.ts';
+import { Database, ListData, UserData } from './mongodb.ts';
 import jsonData from './data.json' assert { type: 'json' };
 
 
-export async function handleCallback(payload, api: string, listCollection:Realm.Services.MongoDB.MongoDBCollection<ListData>, userCollection:Realm.Services.MongoDB.MongoDBCollection<UserData>) {
+export async function handleCallback(payload, api: string, db: Database) {
 	const data: InputData = JSON.parse(payload.callback_query.data)
     if (UserFields.LocationType in data) {
         await answerCallback(payload.callback_query.id, "Processing", api)
@@ -33,17 +33,7 @@ export async function handleCallback(payload, api: string, listCollection:Realm.
         nearestMrt.DISTANCE = nearestDist
         data[UserFields.NearestMrt] = nearestMrt
 
-        let list_id = (await userCollection.findOne({
-            _id: chatId
-        }))?.active_id;
-
-        await listCollection.updateOne({
-            _id: list_id,
-        }, {
-            $push: {
-                list: data
-            }
-        });
+        let list_id = await db.addToList(chatId, data)
         await sendMessage(chatId, list_id ? 'List updated' : 'Error no list found', api)
         return
     }

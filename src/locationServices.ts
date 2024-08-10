@@ -1,10 +1,10 @@
 import { InputData, UserFields } from "./models";
-import { UserData } from "./mongodb";
+import { Database, UserData } from "./mongodb";
 import { getMapDirection, getToken } from "./onemapApi";
 import { sendLocation, sendMessage } from "./telegramApi";
 import { calcDist, capitalize, directionParser, locationDistanceParser } from "./utils";
 
-export async function getNearby(payload, api: string, userCollection: Realm.Services.MongoDB.MongoDBCollection<UserData>) {
+export async function getNearby(payload, api: string, db: Database) {
     const chatId = payload.chat.id
     const lat = Number(payload.location.latitude)
     const lon = Number(payload.location.longitude)
@@ -13,24 +13,7 @@ export async function getNearby(payload, api: string, userCollection: Realm.Serv
     if (!isNaN(Number(reply[reply.length - 1].replace("m", '')))) {
         threshold = Number(reply[reply.length - 1].replace("m", ''))
     }
-    let listInfo = (await userCollection.aggregate([
-        {
-            $match: {
-                _id: chatId
-            }
-        }, {
-            $lookup: {
-                from: "listData",
-                localField: "active_id",
-                foreignField: "_id",
-                as: "listInfo"
-            }
-        }, {
-            $project: {
-                "listInfo": { "$arrayElemAt": ["$listInfo", 0] }
-            }
-        }
-    ]))[0];
+    let listInfo = await db.viewList(chatId)
     if (!listInfo || !('listInfo' in listInfo)) {
         await sendMessage(chatId, "Error: List does not exist", api, JSON.stringify({ remove_keyboard: true }));
     } else {
@@ -48,30 +31,13 @@ export async function getNearby(payload, api: string, userCollection: Realm.Serv
     }
 }
 
-export async function getDirection(payload, api: string, userCollection: Realm.Services.MongoDB.MongoDBCollection<UserData>, email: string, password: string) {
+export async function getDirection(payload, api: string, db: Database, email: string, password: string) {
     const chatId = payload.chat.id
     const lat = Number(payload.location.latitude)
     const lon = Number(payload.location.longitude)
     const reply = payload.reply_to_message.text.split(" ")
     const index = Number(reply[reply.length - 1])
-    let listInfo = (await userCollection.aggregate([
-        {
-            $match: {
-                _id: chatId
-            }
-        }, {
-            $lookup: {
-                from: "listData",
-                localField: "active_id",
-                foreignField: "_id",
-                as: "listInfo"
-            }
-        }, {
-            $project: {
-                "listInfo": { "$arrayElemAt": ["$listInfo", 0] }
-            }
-        }
-    ]))[0];
+    let listInfo = await db.viewList(chatId)
     if (!listInfo || !('listInfo' in listInfo) || listInfo.listInfo.list.length < index) {
         await sendMessage(chatId, "Error: List or list index does not exist", api, JSON.stringify({ remove_keyboard: true }));
     } else {

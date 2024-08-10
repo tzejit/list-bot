@@ -1,6 +1,6 @@
 import { handleCallback } from './callback.ts';
 import { sendMessage } from './telegramApi.ts';
-import { initConnection, ListId } from './mongodb.ts'
+import { Database, ListId } from './mongodb.ts'
 import { Cuisine, generateInputData, InputData, UserFields } from './models.ts';
 import { generateInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { getDirection, getNearby } from './locationServices.ts';
@@ -14,11 +14,11 @@ export default {
 			}
 
 			const payload = await request.json()
-			const [listCollection, userCollection] = await initConnection(env.MONGO_ID, env.DATA_KEY)
-
+			const db = new Database(env.MONGO_ID, env.DATA_KEY)
+			await db.initConnection()
 
 			if ('callback_query' in payload) {
-				await handleCallback(payload, env.API_KEY, listCollection, userCollection)
+				await handleCallback(payload, env.API_KEY, db)
 				return new Response()
 			}
 
@@ -34,9 +34,9 @@ export default {
 					await sendMessage(payload.message.chat.id, "Please reply to the message", env.API_KEY)
 				}
 				if (payload.message.reply_to_message.text.includes(nearbyText)) {
-					await getNearby(payload.message, env.API_KEY, userCollection)
+					await getNearby(payload.message, env.API_KEY, db)
 				} else if (payload.message.reply_to_message.text.includes(directionText)) {
-					await getDirection(payload.message, env.API_KEY, userCollection, env.ONEMAP_EMAIL, env.ONEMAP_PW)
+					await getDirection(payload.message, env.API_KEY, db, env.ONEMAP_EMAIL, env.ONEMAP_PW)
 				}
 				return new Response()
 			}
@@ -51,60 +51,20 @@ export default {
 						return new Response();
 					}
 					const listId = new ListId()
-					await userCollection.updateOne({
-						_id: chatId,
-					}, {
-						$push: {
-							list_ids: listId,
-							list_names: argsRaw
-						},
-						$set: {
-							active_id: listId
-						}
-					}, {
-						upsert: true
-					});
-
-					await listCollection.insertOne({
-						_id: listId,
-						name: argsRaw,
-						list: [],
-						users: [chatId]
-					})
-
+					await db.createNewList(chatId, listId, argsRaw)
 					await sendMessage(chatId, 'List created, active set to this list', env.API_KEY)
 				} break
 				case "/viewlist": {
-					let user = await userCollection.findOne({
-						_id: chatId,
-					});
+					let user = await db.getUser(chatId)
 
 					if (user?.list_names.length === 0) {
 						await sendMessage(chatId, 'No lists found!', env.API_KEY)
 					} else {
 						await sendMessage(chatId, user?.list_names.map((v, i) => `(${i + 1}) ${v}`).join("\n") ?? 'No lists found!', env.API_KEY)
 					}
-
 				} break
 				case "/view": {
-					let listInfo = (await userCollection.aggregate([
-						{
-							$match: {
-								_id: chatId
-							}
-						}, {
-							$lookup: {
-								from: "listData",
-								localField: "active_id",
-								foreignField: "_id",
-								as: "listInfo"
-							}
-						}, {
-							$project: {
-								"listInfo": { "$arrayElemAt": ["$listInfo", 0] }
-							}
-						}
-					]))[0];
+					let listInfo = await db.viewList(chatId)
 					if (!listInfo || !('listInfo' in listInfo)) {
 						await sendMessage(chatId, "Error: List does not exist", env.API_KEY);
 					} else {
@@ -117,28 +77,16 @@ export default {
 						await sendMessage(chatId, 'Integer list index needed', env.API_KEY)
 						return new Response();
 					}
-
-					let new_aid_list = (await userCollection.findOne({
-						_id: chatId,
-					}))?.list_ids
-
+					let new_aid_list = (await db.getUser(chatId))?.list_ids
 					if (!new_aid_list) {
 						await sendMessage(chatId, 'No lists found', env.API_KEY)
 						return new Response();
 					}
-
 					if (new_aid_list!.length < Number(argsRaw)) {
 						await sendMessage(chatId, 'Invalid list index given', env.API_KEY)
 						return new Response();
 					}
-
-					let user = await userCollection.updateOne({
-						_id: chatId,
-					}, {
-						$set: {
-							active_id: new_aid_list![Number(argsRaw) - 1]
-						}
-					});
+					let user = await db.setActiveList(chatId, new_aid_list![Number(argsRaw) - 1])
 					await sendMessage(chatId, user ? 'Updated active list' : 'Error, list does not exist', env.API_KEY)
 				} break
 				case "/add": {
@@ -146,134 +94,47 @@ export default {
 						await sendMessage(chatId, 'Item to add needed', env.API_KEY)
 						return new Response();
 					}
-
 					const p: string = argsRaw.split(" ")[0]
 					const n: string = argsRaw.split(" ").slice(1).join(" ")
-
 					if (!p || !n) {
 						await sendMessage(chatId, 'Postal code and name needed', env.API_KEY)
 						return new Response();
 					}
-
 					let data: InputData = generateInputData(p, n)
 					const opts = generateInlineKeyboardMarkup(Cuisine, data, UserFields.Cuisine)
 					await sendMessage(chatId, "Please select the type of cuisine", env.API_KEY, JSON.stringify(opts));
 				} break
 				case "/remove": {
-
 					if (!argsRaw || isNaN(Number(argsRaw))) {
 						await sendMessage(chatId, 'Index of item to be removed needed', env.API_KEY)
 						return new Response();
 					}
-
-					let list_id = (await userCollection.findOne({
-						_id: chatId
-					}))?.active_id;
-
-					let unset_index = "list." + String(Number(argsRaw) - 1)
-					await listCollection.updateOne({
-						_id: list_id,
-					}, {
-						$unset: {
-							[unset_index]: 1
-						}
-					});
-
-					await listCollection.updateOne({
-						_id: list_id,
-					}, {
-						$pull: {
-							list: null
-						}
-					});
-
+					let list_id = await db.removeFromList(chatId, String(Number(argsRaw) - 1))
 					await sendMessage(chatId, list_id ? 'List updated' : 'Error', env.API_KEY)
 				} break
 				case "/removelist": {
-
 					if (!argsRaw || isNaN(Number(argsRaw))) {
 						await sendMessage(chatId, 'Index of list to be removed needed', env.API_KEY)
 						return new Response();
 					}
-
-					let user = await userCollection.findOne({
-						_id: chatId,
-					});
-
+					let user = await db.removeList(chatId, Number(argsRaw) - 1)
 					if (!user) {
 						await sendMessage(chatId, 'No lists to remove', env.API_KEY)
 						return new Response();
 					}
-
-					let index = Number(argsRaw) - 1
-
-					let removed_id = user!.list_ids.splice(index, 1)[0]
-					user!.list_names.splice(index, 1)
-
-					if (user!.active_id.toJSON() === removed_id.toJSON()) {
-						user!.active_id = user!.list_ids[0] ?? ''
-					}
-
-					await userCollection.findOneAndReplace({
-						_id: chatId,
-					}, user!)
-
-					await listCollection.updateOne({
-						_id: removed_id,
-					}, {
-						$pull: {
-							users: user!._id
-						}
-					});
-
-					await listCollection.deleteOne({
-						_id: removed_id,
-						users: { $eq: [] }
-					});
-
 					await sendMessage(chatId, 'List removed', env.API_KEY)
 				} break
 				case "/export": {
-					let user = await userCollection.findOne({
-						_id: chatId,
-					});
-
+					let user = await db.getUser(chatId)
 					await sendMessage(chatId, user?.active_id.toJSON() ?? 'No lists found!', env.API_KEY)
 				} break
 				case "/import": {
 					const listId = new ListId(argsRaw)
-
-					let list = await listCollection.findOne({
-						_id: listId
-					})
-
+					let list = await db.importList(chatId, listId)
 					if (!list) {
 						await sendMessage(chatId, 'Invalid import token!', env.API_KEY)
 						return new Response();
 					}
-
-					await userCollection.updateOne({
-						_id: chatId,
-					}, {
-						$push: {
-							list_ids: listId,
-							list_names: list.name
-						},
-						$set: {
-							active_id: listId
-						}
-					}, {
-						upsert: true
-					});
-
-					await listCollection.updateOne({
-						_id: listId
-					}, {
-						$push: {
-							users: chatId
-						}
-					})
-
 					await sendMessage(chatId, 'List successfully imported! Active list set to imported list', env.API_KEY)
 				} break
 				case "/nearby": {
