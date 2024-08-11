@@ -2,9 +2,9 @@ import { handleCallback } from './callback.ts';
 import { sendMessage } from './telegramApi.ts';
 import { Database, ListId } from './mongodb.ts'
 import { Cuisine, generateInputData, InputData, NearbyType, UserFields } from './models.ts';
-import { camelCase, generateInlineKeyboardMarkup, locationViewParser } from './utils.ts';
+import { camelCase, generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { getDirection, getNearby } from './locationServices.ts';
-import { cuisineText, directionGetLocText, directionMrtText, directionText, helpText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
+import { cuisineText, directionGetLocText, directionMrtText, directionText, filterCuisineText, helpText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
 import jsonData from './data.json' assert { type: 'json' };
 import { MrtData } from './onemapApi.ts';
 import fuzzysort from 'fuzzysort'
@@ -188,6 +188,10 @@ export default {
 						return new Response();
 					}
 					await sendMessage(chatId, directionText, env.API_KEY, JSON.stringify(generateInlineKeyboardMarkup(NearbyType, {"index": argsRaw}, 'key')))
+				}
+				case "/filter": {
+					const opts = generateSelectionInlineKeyboardMarkup(Cuisine, {[UserFields.Cuisine]: []}, UserFields.Cuisine)
+					await sendMessage(chatId, filterCuisineText, env.API_KEY, JSON.stringify(opts));
 				}
 			}
 

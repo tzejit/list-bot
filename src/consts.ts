@@ -6,6 +6,8 @@ export const directionGetLocText = "Please send your current location to generat
 export const directionMrtText = "Please send the name of the MRT station to generate route to "
 export const cuisineText = "Please select the type of cuisine"
 export const locationText = "Please select the location type"
+export const filterCuisineText = "Please filter the type of cuisine. To select all cuisines, press confirm without selecting anything."
+export const filterLocationText = "Please filter the type of location. To select all locations, press confirm without selecting anything."
 
 export const helpText = `Food list bot helps to manage and share food lists! Here's an overview of what it does:
 

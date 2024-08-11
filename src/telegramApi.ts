@@ -22,6 +22,30 @@ export async function sendMessage(chat_id: string, message: string, api_key: str
     }
 }
 
+export async function editKeyboard(chat_id: string,  message_id: string, api_key: string, reply_markup="") {
+	const url = `https://api.telegram.org/bot${api_key}/editMessageReplyMarkup`
+    if (reply_markup == "") {
+        reply_markup =  JSON.stringify({ remove_keyboard: true })
+    }
+    const response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify({
+            chat_id,
+            message_id,
+            reply_markup,
+            parse_mode: "HTML"
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    const data = await response.json();
+    if (!data.ok) {
+        console.error('Error sending message:', data.description);
+    }
+}
+
 export async function answerCallback(query_id: string, message: string, api_key: string) {
 	const url = `https://api.telegram.org/bot${api_key}/answerCallbackQuery`
 	const response = await fetch(url, {

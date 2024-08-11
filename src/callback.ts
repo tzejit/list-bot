@@ -1,15 +1,15 @@
-import { sendMessage, answerCallback } from './telegramApi.ts';
+import { sendMessage, answerCallback, editKeyboard } from './telegramApi.ts';
 import { getMapData, MrtData } from './onemapApi.ts'
-import { InputData, LocationType, UserFields } from './models.ts';
-import { calcDist, generateInlineKeyboardMarkup } from './utils.ts';
+import { Cuisine, InputData, LocationType, UserFields } from './models.ts';
+import { calcDist, generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { Database } from './mongodb.ts';
 import jsonData from './data.json' assert { type: 'json' };
-import { cuisineText, directionGetLocText, directionMrtText, directionText, locationText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
+import { cuisineText, directionGetLocText, directionMrtText, directionText, filterCuisineText, filterLocationText, locationText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
 
 
 export async function handleCallback(payload, api: string, db: Database) {
     const text = payload.callback_query.message.text
-    let callback: Function = ()=>{};
+    let callback: Function = () => { };
     if (text.includes(cuisineText)) {
         callback = handleAddCuisineCallback
     } else if (text.includes(locationText)) {
@@ -18,6 +18,10 @@ export async function handleCallback(payload, api: string, db: Database) {
         callback = handleNearbyCallback
     } else if (text.includes(directionText)) {
         callback = handleDirectionCallback
+    } else if (text.includes(filterCuisineText)) {
+        callback = handleFilterCuisineCallback
+    } else if (text.includes(filterLocationText)) {
+        callback = handleFilterLocationCallback
     }
     await callback(payload, api, db)
 }
@@ -61,7 +65,7 @@ async function handleAddCuisineCallback(payload, api: string, db: Database) {
     await sendMessage(payload.callback_query.message.chat.id, locationText, api, JSON.stringify(opts));
 }
 
-async function handleNearbyCallback(payload, api:string, db:Database) {
+async function handleNearbyCallback(payload, api: string, db: Database) {
     const chatId = payload.callback_query.message.chat.id
     const data = JSON.parse(payload.callback_query.data)
     let msg = data.key == 0 ? nearbyMrtText : nearbyGetLocText
@@ -72,11 +76,59 @@ async function handleNearbyCallback(payload, api:string, db:Database) {
     await sendMessage(chatId, msg, api, JSON.stringify({ force_reply: true }));
 }
 
-async function handleDirectionCallback(payload, api:string, db:Database) {
+async function handleDirectionCallback(payload, api: string, db: Database) {
     const chatId = payload.callback_query.message.chat.id
     const data = JSON.parse(payload.callback_query.data)
     let msg = data.key == 0 ? directionMrtText : directionGetLocText
     msg += data.index
     await answerCallback(payload.callback_query.id, "Selected", api)
     await sendMessage(chatId, msg, api, JSON.stringify({ force_reply: true }));
+}
+
+async function handleFilterCuisineCallback(payload, api: string, db: Database) {
+    const chatId = payload.callback_query.message.chat.id
+    const message_id = payload.callback_query.message.message_id
+    const data = JSON.parse(payload.callback_query.data)
+    await answerCallback(payload.callback_query.id, "Selected", api)
+
+    if (data.next !== 1) {
+        const opts = generateSelectionInlineKeyboardMarkup(Cuisine, data, UserFields.Cuisine)
+        await editKeyboard(chatId, message_id, api, JSON.stringify(opts));
+    } else {
+        data.next = 0
+        const opts = generateSelectionInlineKeyboardMarkup(LocationType, { ...data, [UserFields.LocationType]: [] }, UserFields.LocationType)
+        await sendMessage(chatId, filterLocationText, api, JSON.stringify(opts));
+    }
+}
+
+async function handleFilterLocationCallback(payload, api: string, db: Database) {
+    const chatId = payload.callback_query.message.chat.id
+    const message_id = payload.callback_query.message.message_id
+    const data = JSON.parse(payload.callback_query.data)
+    await answerCallback(payload.callback_query.id, "Selected", api)
+
+    if (data.next !== 1) {
+        const opts = generateSelectionInlineKeyboardMarkup(LocationType, data, UserFields.LocationType)
+        await editKeyboard(chatId, message_id, api, JSON.stringify(opts));
+    } else {
+        let listInfo = await db.viewList(chatId)
+        if (!listInfo || !('listInfo' in listInfo)) {
+            await sendMessage(chatId, "Error: List does not exist", api);
+        } else {
+            const dataList = listInfo.listInfo.list.filter(e => {
+                let locCheck = true
+                let cuisCheck = true
+                if (data[UserFields.LocationType].length > 0) {
+                    locCheck = data[UserFields.LocationType].includes(e[UserFields.LocationType])
+                }
+                if (data[UserFields.Cuisine].length > 0) {
+                    cuisCheck = data[UserFields.Cuisine].includes(e[UserFields.Cuisine])
+                } 
+                return locCheck && cuisCheck
+            })
+            let message = dataList.length == 0 ? "No lists items found!" : dataList.map((v: InputData, i: number) => locationViewParser(i + 1, v)).join("\n\n");
+            await sendMessage(chatId, listInfo.listInfo.name + "\n" + message, api);
+        }
+    }
+
 }
