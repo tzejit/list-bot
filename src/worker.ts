@@ -1,10 +1,13 @@
 import { handleCallback } from './callback.ts';
 import { sendMessage } from './telegramApi.ts';
 import { Database, ListId } from './mongodb.ts'
-import { Cuisine, generateInputData, InputData, UserFields } from './models.ts';
-import { generateInlineKeyboardMarkup, locationViewParser } from './utils.ts';
+import { Cuisine, generateInputData, InputData, NearbyType, UserFields } from './models.ts';
+import { camelCase, generateInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { getDirection, getNearby } from './locationServices.ts';
-import { directionText, nearbyText } from './consts.ts';
+import { cuisineText, directionGetLocText, directionMrtText, directionText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
+import jsonData from './data.json' assert { type: 'json' };
+import { MrtData } from './onemapApi.ts';
+import fuzzysort from 'fuzzysort'
 
 export default {
 	async fetch(request, env) {
@@ -29,14 +32,45 @@ export default {
 				return new Response()
 			}
 
-			if ('location' in payload.message) {
-				if (!("reply_to_message" in payload.message)) {
-					await sendMessage(payload.message.chat.id, "Please reply to the message", env.API_KEY)
-				}
-				if (payload.message.reply_to_message.text.includes(nearbyText)) {
-					await getNearby(payload.message, env.API_KEY, db)
-				} else if (payload.message.reply_to_message.text.includes(directionText)) {
-					await getDirection(payload.message, env.API_KEY, db, env.ONEMAP_EMAIL, env.ONEMAP_PW)
+			if ("reply_to_message" in payload.message) {
+				const chatId = payload.message.chat.id
+				const replyText = payload.message.reply_to_message.text
+
+				if ('location' in payload.message) {
+					const lat = Number(payload.message.location.latitude)
+					const lon = Number(payload.message.location.longitude)
+					if (replyText.includes(nearbyGetLocText)) {
+						const reply = replyText.split(" ")
+						let threshold = 999999999
+						if (!isNaN(Number(reply[reply.length - 1].replace("m", '')))) {
+							threshold = Number(reply[reply.length - 1].replace("m", ''))
+						}
+						await getNearby(chatId, threshold, lat, lon, env.API_KEY, db)
+					} else if (replyText.includes(directionGetLocText)) {
+						const reply = replyText.split(" ")
+						const index = Number(reply[reply.length - 1])
+						await getDirection(chatId, index, lat, lon, env.API_KEY, db, env.ONEMAP_EMAIL, env.ONEMAP_PW)
+
+					}
+				} else {
+					if (replyText.includes(nearbyMrtText)) {
+						const reply = replyText.split(" ")
+						let threshold = 999999999
+						if (!isNaN(Number(reply[reply.length - 1].replace("m", '')))) {
+							threshold = Number(reply[reply.length - 1].replace("m", ''))
+						}
+						const station = payload.message.text
+						const mrtData: MrtData[] = jsonData
+						const chosenStation = fuzzysort.go(station, mrtData, { key: 'SEARCHVAL', limit: 1 })[0].obj
+						await getNearby(chatId, threshold, Number(chosenStation.LATITUDE), Number(chosenStation.LONGITUDE), env.API_KEY, db, camelCase(chosenStation.SEARCHVAL.split(" (")[0]))
+					} else if (replyText.includes(directionMrtText)) {
+						const reply = replyText.split(" ")
+						const index = Number(reply[reply.length - 1])
+						const station = payload.message.text
+						const mrtData: MrtData[] = jsonData
+						const chosenStation = fuzzysort.go(station, mrtData, { key: 'SEARCHVAL', limit: 1 })[0].obj
+						await getDirection(chatId, index, Number(chosenStation.LATITUDE), Number(chosenStation.LONGITUDE), env.API_KEY, db, env.ONEMAP_EMAIL, env.ONEMAP_PW)
+					}
 				}
 				return new Response()
 			}
@@ -102,7 +136,7 @@ export default {
 					}
 					let data: InputData = generateInputData(p, n)
 					const opts = generateInlineKeyboardMarkup(Cuisine, data, UserFields.Cuisine)
-					await sendMessage(chatId, "Please select the type of cuisine", env.API_KEY, JSON.stringify(opts));
+					await sendMessage(chatId, cuisineText, env.API_KEY, JSON.stringify(opts));
 				} break
 				case "/remove": {
 					if (!argsRaw || isNaN(Number(argsRaw))) {
@@ -142,18 +176,14 @@ export default {
 					if (isNaN(dist)) {
 						dist = 0
 					}
-					let text = nearbyText
-					if (dist != 0) {
-						text += ` within ${dist}m`
-					}
-					await sendMessage(chatId, text, env.API_KEY, JSON.stringify({ force_reply: true }))
+					await sendMessage(chatId, nearbyText, env.API_KEY, JSON.stringify(generateInlineKeyboardMarkup(NearbyType, {"threshold": dist}, 'key')))
 				} break
 				case "/direction": {
 					if (!argsRaw || isNaN(Number(argsRaw))) {
 						await sendMessage(chatId, 'Index of place needed', env.API_KEY)
 						return new Response();
 					}
-					await sendMessage(chatId, directionText + argsRaw, env.API_KEY, JSON.stringify({ force_reply: true }))
+					await sendMessage(chatId, directionText, env.API_KEY, JSON.stringify(generateInlineKeyboardMarkup(NearbyType, {"index": argsRaw}, 'key')))
 				}
 			}
 

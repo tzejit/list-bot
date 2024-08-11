@@ -24,7 +24,7 @@ interface OneMapResponse {
 }
 
 export async function getMapData(postcode: string) {
-	const url = `https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${postcode}&returnGeom=Y&getAddrDetails=Y&pageNum=1`
+    const url = `https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${postcode}&returnGeom=Y&getAddrDetails=Y&pageNum=1`
     const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -32,8 +32,8 @@ export async function getMapData(postcode: string) {
         },
     });
 
-    const data : OneMapResponse = await response.json();
-    if (!response.ok ) {
+    const data: OneMapResponse = await response.json();
+    if (!response.ok) {
         console.error('Error getting map data:', data);
     }
     return data
@@ -41,7 +41,7 @@ export async function getMapData(postcode: string) {
 
 export async function getToken(email, password) {
     const url = "https://www.onemap.gov.sg/api/auth/post/getToken"
-	const response = await fetch(url, {
+    const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({
             email,
@@ -52,7 +52,7 @@ export async function getToken(email, password) {
         },
     });
     const data = await response.json();
-    if (!response.ok ) {
+    if (!response.ok) {
         console.error('Error getting token data:', data);
     }
     return data.access_token
@@ -60,10 +60,10 @@ export async function getToken(email, password) {
 
 export async function getMapDirection(start: string, end: string, email: string, password: string) {
     const token = await getToken(email, password)
-    const date = new Date().toLocaleDateString('en-us', {month: '2-digit', day: '2-digit', year: 'numeric'}).replace(/\//g, "-")
-    const time = new Date().toLocaleTimeString('en-gb')
+    const date = new Date().toLocaleDateString('en-us', { month: '2-digit', day: '2-digit', year: 'numeric', timeZone: 'Asia/Singapore' }).replace(/\//g, "-")
+    const time = new Date().toLocaleTimeString('en-gb', { timeZone: 'Asia/Singapore' })
     const url = `https://www.onemap.gov.sg/api/public/routingsvc/route?start=${start}&end=${end}&routeType=pt&date=${date}&time=${time}&mode=TRANSIT&maxWalkDistance=500&numItineraries=2`
-	const response = await fetch(url, {
+    const response = await fetch(url, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -71,10 +71,10 @@ export async function getMapDirection(start: string, end: string, email: string,
         },
     });
     const data = await response.json();
-    if (!response.ok ) {
+    if (!response.ok) {
         console.error('Error getting map data:', data);
         console.error(url)
     }
-    return data.plan.itineraries[0]
+    return data.plan.itineraries
 
 }

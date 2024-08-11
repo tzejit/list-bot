@@ -1,17 +1,12 @@
 import { InputData, UserFields } from "./models";
-import { Database, UserData } from "./mongodb";
-import { getMapDirection, getToken } from "./onemapApi";
+import { Database } from "./mongodb";
+import { getMapDirection } from "./onemapApi";
 import { sendLocation, sendMessage } from "./telegramApi";
-import { calcDist, capitalize, directionParser, locationDistanceParser } from "./utils";
+import { calcDist, directionParser, locationDistanceParser } from "./utils";
 
-export async function getNearby(payload, api: string, db: Database) {
-    const chatId = payload.chat.id
-    const lat = Number(payload.location.latitude)
-    const lon = Number(payload.location.longitude)
-    const reply = payload.reply_to_message.text.split(" ")
-    let threshold = 999999999
-    if (!isNaN(Number(reply[reply.length - 1].replace("m", '')))) {
-        threshold = Number(reply[reply.length - 1].replace("m", ''))
+export async function getNearby(chatId: string, threshold: number, lat: number, lon: number, api: string, db: Database, mrt?: string) {
+    if (!mrt) {
+        mrt = "you"
     }
     let listInfo = await db.viewList(chatId)
     if (!listInfo || !('listInfo' in listInfo)) {
@@ -27,16 +22,11 @@ export async function getNearby(payload, api: string, db: Database) {
         })
         output.sort((a, b) => a.dist - b.dist)
         const text = output.length != 0 ? output.map(o => locationDistanceParser(o.id + 1, o.dist, o.data)).join('\n\n') : "No places found!"
-        await sendMessage(chatId, text, api, JSON.stringify({ remove_keyboard: true }));
+        await sendMessage(chatId, `Places near ${mrt}\n${text}`, api, JSON.stringify({ remove_keyboard: true }));
     }
 }
 
-export async function getDirection(payload, api: string, db: Database, email: string, password: string) {
-    const chatId = payload.chat.id
-    const lat = Number(payload.location.latitude)
-    const lon = Number(payload.location.longitude)
-    const reply = payload.reply_to_message.text.split(" ")
-    const index = Number(reply[reply.length - 1])
+export async function getDirection(chatId: string, index: number, lat: number, lon: number, api: string, db: Database, email: string, password: string) {
     let listInfo = await db.viewList(chatId)
     if (!listInfo || !('listInfo' in listInfo) || listInfo.listInfo.list.length < index) {
         await sendMessage(chatId, "Error: List or list index does not exist", api, JSON.stringify({ remove_keyboard: true }));
@@ -44,7 +34,9 @@ export async function getDirection(payload, api: string, db: Database, email: st
         const data: InputData = listInfo.listInfo.list[index - 1]
         const locationData = data[UserFields.LocationData]!
         const directionData = await getMapDirection(`${lat},${lon}`, `${locationData.LATITUDE},${locationData.LONGITUDE}`, email, password)
-        const msg = `<u>Directions</u>\n` + directionParser(directionData, data[UserFields.Name]) + `\n\nAlternatively, click on the map below to open google maps`
+        let msg = "<b>Directions</b>"
+        directionData.forEach((d, i) => msg += `\n\n<u>Direction ${i+1}</u>\n${directionParser(d, data[UserFields.Name])}`)
+        msg += `\n\nAlternatively, click on the map below to open google maps`
         await sendMessage(chatId, msg, api, JSON.stringify({ remove_keyboard: true }))
         await sendLocation(chatId, Number(locationData.LATITUDE), Number(locationData.LONGITUDE), api, JSON.stringify({ remove_keyboard: true }));
     }

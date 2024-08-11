@@ -28,6 +28,11 @@ export enum LocationType {
     Others
 }
 
+export enum NearbyType {
+    MRT,
+    Location
+}
+
 export interface InputData {
     [UserFields.PostalCode]: string;
     [UserFields.Name]: string;

@@ -1,2 +1,8 @@
-export const nearbyText = `Please send your location to find nearby places`
-export const directionText = "Please send your current location to generate route to "
+export const nearbyText = "Would you like to get nearby places from your current location or MRT station?"
+export const nearbyGetLocText = "Please send your location to find nearby places"
+export const nearbyMrtText = "Please send the name of the MRT station to find nearby places"
+export const directionText = "Would you like to get directions from your current location or MRT station?"
+export const directionGetLocText = "Please send your current location to generate route to "
+export const directionMrtText = "Please send the name of the MRT station to generate route to "
+export const cuisineText = "Please select the type of cuisine"
+export const locationText = "Please select the location type"

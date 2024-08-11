@@ -1,5 +1,8 @@
 export async function sendMessage(chat_id: string, message: string, api_key: string, reply_markup="") {
 	const url = `https://api.telegram.org/bot${api_key}/sendMessage`
+    if (reply_markup == "") {
+        reply_markup =  JSON.stringify({ remove_keyboard: true })
+    }
     const response = await fetch(url, {
         method: 'POST',
         body: JSON.stringify({
