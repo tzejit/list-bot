@@ -4,7 +4,7 @@ import { Database, ListId } from './mongodb.ts'
 import { Cuisine, generateInputData, InputData, NearbyType, UserFields } from './models.ts';
 import { camelCase, generateInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { getDirection, getNearby } from './locationServices.ts';
-import { cuisineText, directionGetLocText, directionMrtText, directionText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
+import { cuisineText, directionGetLocText, directionMrtText, directionText, helpText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
 import jsonData from './data.json' assert { type: 'json' };
 import { MrtData } from './onemapApi.ts';
 import fuzzysort from 'fuzzysort'
@@ -79,6 +79,10 @@ export default {
 			const command: string = payload.message.text.split(" ")[0]
 			const argsRaw: string = payload.message.text.split(" ").slice(1).join(" ")
 			switch (command) {
+				case "/start":
+				case "/help": {
+					await sendMessage(chatId, helpText, env.API_KEY)
+				} break
 				case "/new": {
 					if (!argsRaw) {
 						await sendMessage(chatId, 'Name for list needed', env.API_KEY)
