@@ -8,7 +8,7 @@ export const cuisineText = "Please select the type of cuisine"
 export const locationText = "Please select the location type"
 export const filterCuisineText = "Please filter the type of cuisine. To select all cuisines, press confirm without selecting anything."
 export const filterLocationText = "Please filter the type of location. To select all locations, press confirm without selecting anything."
-
+export const editMessageText = "Please edit the postal code and name"
 export const helpText = `Food list bot helps to manage and share food lists! Here's an overview of what it does:
 
 <u>General Terminology</u>
@@ -25,7 +25,7 @@ Use the /active command to change your active list to one specified by the index
 
 <u>Using your list</u>
 Use the /add command to add a food place (using its postal code) to your active list, and use /remove to remove places by their index. 
-Items in the list can be viewed using the /view command.
+Items in the list can be viewed using the /view command, and the list can be filtered to specific cuisines and locations using /filter.
 To view food places near you use the /nearby command, and to get directions to the food places use the /direction command.
 
 <u>Sharing your lists</u>
@@ -36,6 +36,7 @@ Now both parties are able to view and edit the same list!
 Here's an overview of the commands supported:
 /new &lt;name&gt;: Creates a new list with the given name 
 /view: Shows the content and index of the currently active list
+/filter: Shows filtered content of the currently active list
 /viewlist: Shows all lists
 /add &lt;postalcode name&gt;: Adds an item to the currently active list
 /active &lt;index&gt;: Sets the active list to the list with given by index

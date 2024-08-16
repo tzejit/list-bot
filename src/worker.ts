@@ -4,7 +4,7 @@ import { Database, ListId } from './mongodb.ts'
 import { Cuisine, generateInputData, InputData, NearbyType, UserFields } from './models.ts';
 import { camelCase, generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { getDirection, getNearby } from './locationServices.ts';
-import { cuisineText, directionGetLocText, directionMrtText, directionText, filterCuisineText, helpText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
+import { cuisineText, directionGetLocText, directionMrtText, directionText, editMessageText, filterCuisineText, helpText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
 import jsonData from './data.json' assert { type: 'json' };
 import { MrtData } from './onemapApi.ts';
 import fuzzysort from 'fuzzysort'
@@ -188,10 +188,32 @@ export default {
 						return new Response();
 					}
 					await sendMessage(chatId, directionText, env.API_KEY, JSON.stringify(generateInlineKeyboardMarkup(NearbyType, {"index": argsRaw}, 'key')))
-				}
+				} break
 				case "/filter": {
 					const opts = generateSelectionInlineKeyboardMarkup(Cuisine, {[UserFields.Cuisine]: []}, UserFields.Cuisine)
 					await sendMessage(chatId, filterCuisineText, env.API_KEY, JSON.stringify(opts));
+				} break 
+				case "/edit": {
+					if (!argsRaw || isNaN(Number(argsRaw))) {
+						await sendMessage(chatId, 'Index of place needed', env.API_KEY)
+						return new Response();
+					}
+					const ind = Number(argsRaw)-1
+					let listInfo = await db.viewList(chatId)
+					if (!listInfo || !('listInfo' in listInfo) || ind >= listInfo.listInfo.list.length) {
+						await sendMessage(chatId, "Error: index in list does not exist", env.API_KEY);
+					} else {
+						const data: InputData = listInfo.listInfo.list[ind]
+						await sendMessage(chatId, editMessageText, env.API_KEY, JSON.stringify({ force_reply: true, input_field_placeholder: `${data[UserFields.PostalCode]} ${data[UserFields.Name]}` }));
+					}
+				} break
+				case "/mark": {
+					if (!argsRaw || isNaN(Number(argsRaw))) {
+						await sendMessage(chatId, 'Index of place needed', env.API_KEY)
+						return new Response();
+					}
+					let list_id = await db.markListItem(chatId, String(Number(argsRaw) - 1))
+					await sendMessage(chatId, list_id ? 'List updated' : 'Error', env.API_KEY)
 				}
 			}
 

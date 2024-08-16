@@ -1,5 +1,5 @@
 import * as Realm from 'realm-web';
-import { InputData } from './models';
+import { InputData, UserFields } from './models';
 
 type Document = globalThis.Realm.Services.MongoDB.Document;
 
@@ -212,6 +212,27 @@ export class Database {
         }, {
             $push: {
                 list: data
+            }
+        });
+
+        return true
+    }
+
+    async markListItem(chatId: string, index: string) {
+        // Can probably be done in 1 function call
+        let list_id = (await this.userCollection.findOne({
+            _id: chatId
+        }))?.active_id;
+
+        let list_index = "list." + index + "." + UserFields.Visited
+
+        const listInfo = await this.viewList(chatId)
+        let bool = !listInfo.listInfo.list[index][UserFields.Visited]
+        await this.listCollection.updateOne({
+            _id: list_id,
+        }, {
+            $set: {
+                [list_index]: bool
             }
         });
 

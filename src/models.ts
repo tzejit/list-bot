@@ -6,7 +6,8 @@ export enum UserFields {
     Cuisine = 'c',
     LocationType = 't',
     LocationData = 'd',
-    NearestMrt = 'm'
+    NearestMrt = 'm',
+    Visited = 'v'
 }
 
 export enum Cuisine {
@@ -40,6 +41,7 @@ export interface InputData {
     [UserFields.LocationType]?: LocationType;
     [UserFields.LocationData]?: LocationData;
     [UserFields.NearestMrt]?: MrtData;
+    [UserFields.Visited]?: boolean
 }
 
 export function generateInputData(p: string, n: string): InputData {

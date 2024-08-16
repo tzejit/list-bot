@@ -12,6 +12,6 @@
   },
   "dependencies": {
     "fuzzysort": "^3.0.2",
-    "realm-web": "^2.0.0"
+    "realm-web": "^2.0.1"
   }
 }

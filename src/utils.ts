@@ -50,9 +50,10 @@ export function generateSelectionInlineKeyboardMarkup(enumType: any, data: objec
         } else {
             cloneObj[jsonKey].push(value)
         }
-        if (counter == 4) {
+        if (counter == 3) {
             finalArray.push(keyArray)
             keyArray = []
+            counter = 0
         }
         keyArray.push(
             {
@@ -114,7 +115,11 @@ export function locationViewParser(id: number, data: InputData) {
     const mrtData = data[UserFields.NearestMrt]!
     let mrtName = mrtData.SEARCHVAL.split("MRT STATION")[0].trim().split(" ").map(e => capitalize(e)).join(" ")
     let mrtCode = mrtData.CODE.join('/')
-    return `<u>${id}. ${data[UserFields.Name]}</u>\nCuisine: ${cuisineType}\nType: ${locationType}\n${Math.round(mrtData.DISTANCE!)}m from ${mrtName} (${mrtCode})`
+    let msg = `<u>${id}. ${data[UserFields.Name]}</u>\nCuisine: ${cuisineType}\nType: ${locationType}\n${Math.round(mrtData.DISTANCE!)}m from ${mrtName} (${mrtCode})`
+    if (data[UserFields.Visited]) {
+        msg = `<s>${msg}</s>`
+    }
+    return msg
 }
 
 export function directionParser(paylod, destination: string) {
