@@ -204,10 +204,10 @@ export class Database {
         }))?.active_id;
 
         if (!list_id) {
-            return false
+            return null
         }
 
-        await this.listCollection.updateOne({
+        const doc = await this.listCollection.findOneAndUpdate({
             _id: list_id,
         }, {
             $push: {
@@ -215,7 +215,7 @@ export class Database {
             }
         });
 
-        return true
+        return doc
     }
 
     async markListItem(chatId: string, index: string) {

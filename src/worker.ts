@@ -70,7 +70,7 @@ export default {
 						const mrtData: MrtData[] = jsonData
 						const chosenStation = fuzzysort.go(station, mrtData, { key: 'SEARCHVAL', limit: 1 })[0].obj
 						await getDirection(chatId, index, Number(chosenStation.LATITUDE), Number(chosenStation.LONGITUDE), env.API_KEY, db, env.ONEMAP_EMAIL, env.ONEMAP_PW)
-					}
+					} else if (replyText.includes())
 				}
 				return new Response()
 			}

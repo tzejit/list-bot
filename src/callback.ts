@@ -1,10 +1,8 @@
 import { sendMessage, answerCallback, editKeyboard } from './telegramApi.ts';
-import { getMapData, MrtData } from './onemapApi.ts'
-import { Cuisine, InputData, LocationType, UserFields } from './models.ts';
-import { calcDist, generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser } from './utils.ts';
+import { Cuisine, InputData, LocationType, UserFields, YesNo } from './models.ts';
+import { generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser, saveLoactionData } from './utils.ts';
 import { Database } from './mongodb.ts';
-import jsonData from './data.json' assert { type: 'json' };
-import { cuisineText, directionGetLocText, directionMrtText, directionText, filterCuisineText, filterLocationText, locationText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
+import { cuisineText, directionGetLocText, directionMrtText, directionText, filterCuisineText, filterLocationText, locationText, nearbyGetLocText, nearbyMrtText, nearbyText, noteReply, noteText } from './consts.ts';
 
 
 export async function handleCallback(payload, api: string, db: Database) {
@@ -14,6 +12,8 @@ export async function handleCallback(payload, api: string, db: Database) {
         callback = handleAddCuisineCallback
     } else if (text.includes(locationText)) {
         callback = handleAddLocationCallback
+    } else if (text.includes(noteText)) {
+        callback = handleAddNoteCallback
     } else if (text.includes(nearbyText)) {
         callback = handleNearbyCallback
     } else if (text.includes(directionText)) {
@@ -28,34 +28,20 @@ export async function handleCallback(payload, api: string, db: Database) {
 
 async function handleAddLocationCallback(payload, api: string, db: Database) {
     const data: InputData = JSON.parse(payload.callback_query.data)
-    await answerCallback(payload.callback_query.id, "Processing", api)
-    const map = await getMapData(data[UserFields.PostalCode])
-    const chatId = payload.callback_query.message.chat.id
-    if (map.found == 0) {
-        await sendMessage(chatId, "Postal code seems to be invalid", api);
-        return
+    const opts = generateInlineKeyboardMarkup(YesNo, data, UserFields.Note)
+    await answerCallback(payload.callback_query.id, "Selected", api)
+    await sendMessage(payload.callback_query.message.chat.id, noteText, api, JSON.stringify(opts));
+
+}
+async function handleAddNoteCallback(payload, api: string, db: Database) {
+    const data: InputData = JSON.parse(payload.callback_query.data)
+    await answerCallback(payload.callback_query.id, "Selected", api)
+    const list_data = await saveLoactionData(payload, api, db)
+    if (data[UserFields.Note] === String(YesNo.Yes)) {
+        await sendMessage(payload.callback_query.message.chat.id, noteReply + (list_data!.list.length + 1), api, JSON.stringify({ force_reply: true }));
+    } else {
+        await sendMessage(payload.callback_query.message.chat.id, list_data ? 'List updated' : 'Error no list found', api)
     }
-    data[UserFields.LocationData] = map.results[0]
-    const mrtData: MrtData[] = jsonData
-
-    let nearestDist = 99999999
-    let nearestMrt = mrtData[0]
-
-    mrtData.forEach(mrt => {
-        const d = calcDist(Number(mrt.LATITUDE), Number(mrt.LONGITUDE), Number(map.results[0].LATITUDE), Number(map.results[0].LONGITUDE))
-        if (d < nearestDist) {
-            nearestDist = d
-            nearestMrt = mrt
-        }
-    })
-
-    nearestMrt.DISTANCE = nearestDist
-    data[UserFields.NearestMrt] = nearestMrt
-
-    let list_id = await db.addToList(chatId, data)
-    await sendMessage(chatId, list_id ? 'List updated' : 'Error no list found', api)
-    return
-
 }
 
 async function handleAddCuisineCallback(payload, api: string, db: Database) {
@@ -123,7 +109,7 @@ async function handleFilterLocationCallback(payload, api: string, db: Database) 
                 }
                 if (data[UserFields.Cuisine].length > 0) {
                     cuisCheck = data[UserFields.Cuisine].includes(e[UserFields.Cuisine])
-                } 
+                }
                 return locCheck && cuisCheck
             })
             let message = dataList.length == 0 ? "No lists items found!" : dataList.map((v: InputData, i: number) => locationViewParser(i + 1, v)).join("\n\n");

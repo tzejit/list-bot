@@ -1,4 +1,9 @@
-import { Cuisine, InputData, LocationType, UserFields } from "./models"
+import { Cuisine, InputData, LocationType, UserFields, YesNo } from "./models"
+import { Database } from "./mongodb"
+import { getMapData, MrtData } from "./onemapApi"
+import { sendMessage } from "./telegramApi"
+import jsonData from './data.json' assert { type: 'json' };
+
 
 export function generateInlineKeyboardMarkup(enumType: any, data: object, jsonKey: string) {
 
@@ -152,4 +157,38 @@ function directionLegParser(payload) {
     }
 
     return text + ` to ${payload.name}${code}(${payload.duration} min)`
+}
+
+export async function saveLoactionData(payload, api: string, db: Database) {
+    const data: InputData = JSON.parse(payload.callback_query.data)
+    const map = await getMapData(data[UserFields.PostalCode])
+    const chatId = payload.callback_query.message.chat.id
+    if (map.found == 0) {
+        await sendMessage(chatId, "Postal code seems to be invalid", api);
+        return
+    }
+    data[UserFields.LocationData] = map.results[0]
+    const mrtData: MrtData[] = jsonData
+
+    let nearestDist = 99999999
+    let nearestMrt = mrtData[0]
+
+    mrtData.forEach(mrt => {
+        const d = calcDist(Number(mrt.LATITUDE), Number(mrt.LONGITUDE), Number(map.results[0].LATITUDE), Number(map.results[0].LONGITUDE))
+        if (d < nearestDist) {
+            nearestDist = d
+            nearestMrt = mrt
+        }
+    })
+
+    nearestMrt.DISTANCE = nearestDist
+    data[UserFields.NearestMrt] = nearestMrt
+
+    if (data[UserFields.Note] == String(YesNo.No)) {
+        delete data[UserFields.Note]
+    }
+
+    let list_data = await db.addToList(chatId, data)
+    return list_data
+
 }
