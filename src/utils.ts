@@ -121,6 +121,9 @@ export function locationViewParser(id: number, data: InputData) {
     let mrtName = mrtData.SEARCHVAL.split("MRT STATION")[0].trim().split(" ").map(e => capitalize(e)).join(" ")
     let mrtCode = mrtData.CODE.join('/')
     let msg = `<u>${id}. ${data[UserFields.Name]}</u>\nCuisine: ${cuisineType}\nType: ${locationType}\n${Math.round(mrtData.DISTANCE!)}m from ${mrtName} (${mrtCode})`
+    if (data[UserFields.Note]) {
+        msg += `\n<i>${data[UserFields.Note]}</i>`
+    }
     if (data[UserFields.Visited]) {
         msg = `<s>${msg}</s>`
     }
@@ -159,7 +162,7 @@ function directionLegParser(payload) {
     return text + ` to ${payload.name}${code}(${payload.duration} min)`
 }
 
-export async function saveLoactionData(payload, api: string, db: Database) {
+export async function saveLocationData(payload, api: string, db: Database) {
     const data: InputData = JSON.parse(payload.callback_query.data)
     const map = await getMapData(data[UserFields.PostalCode])
     const chatId = payload.callback_query.message.chat.id

@@ -1,6 +1,6 @@
 import { sendMessage, answerCallback, editKeyboard } from './telegramApi.ts';
 import { Cuisine, InputData, LocationType, UserFields, YesNo } from './models.ts';
-import { generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser, saveLoactionData } from './utils.ts';
+import { generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser, saveLocationData } from './utils.ts';
 import { Database } from './mongodb.ts';
 import { cuisineText, directionGetLocText, directionMrtText, directionText, filterCuisineText, filterLocationText, locationText, nearbyGetLocText, nearbyMrtText, nearbyText, noteReply, noteText } from './consts.ts';
 
@@ -36,8 +36,8 @@ async function handleAddLocationCallback(payload, api: string, db: Database) {
 async function handleAddNoteCallback(payload, api: string, db: Database) {
     const data: InputData = JSON.parse(payload.callback_query.data)
     await answerCallback(payload.callback_query.id, "Selected", api)
-    const list_data = await saveLoactionData(payload, api, db)
-    if (data[UserFields.Note] === String(YesNo.Yes)) {
+    const list_data = await saveLocationData(payload, api, db)
+    if (data[UserFields.Note] == String(YesNo.Yes)) {
         await sendMessage(payload.callback_query.message.chat.id, noteReply + (list_data!.list.length + 1), api, JSON.stringify({ force_reply: true }));
     } else {
         await sendMessage(payload.callback_query.message.chat.id, list_data ? 'List updated' : 'Error no list found', api)

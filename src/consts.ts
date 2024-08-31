@@ -29,6 +29,7 @@ Use the /active command to change your active list to one specified by the index
 Use the /add command to add a food place (using its postal code) to your active list, and use /remove to remove places by their index. 
 Items in the list can be viewed using the /view command, and the list can be filtered to specific cuisines and locations using /filter.
 To view food places near you use the /nearby command, and to get directions to the food places use the /direction command.
+/mark can be used to mark a place as visited.
 
 <u>Sharing your lists</u>
 To share your list with another user, use the /export command and send the resulting ID to whoever you want to share the list to.
@@ -39,6 +40,7 @@ Here's an overview of the commands supported:
 /new &lt;name&gt;: Creates a new list with the given name 
 /view: Shows the content and index of the currently active list
 /filter: Shows filtered content of the currently active list
+/mark &lt;index&gt;: Marks the item from active list as visited
 /viewlist: Shows all lists
 /add &lt;postalcode name&gt;: Adds an item to the currently active list
 /active &lt;index&gt;: Sets the active list to the list with given by index

@@ -4,7 +4,7 @@ import { Database, ListId } from './mongodb.ts'
 import { Cuisine, generateInputData, InputData, NearbyType, UserFields } from './models.ts';
 import { camelCase, generateInlineKeyboardMarkup, generateSelectionInlineKeyboardMarkup, locationViewParser } from './utils.ts';
 import { getDirection, getNearby } from './locationServices.ts';
-import { cuisineText, directionGetLocText, directionMrtText, directionText, editMessageText, filterCuisineText, helpText, nearbyGetLocText, nearbyMrtText, nearbyText } from './consts.ts';
+import { cuisineText, directionGetLocText, directionMrtText, directionText, editMessageText, filterCuisineText, helpText, nearbyGetLocText, nearbyMrtText, nearbyText, noteReply } from './consts.ts';
 import jsonData from './data.json' assert { type: 'json' };
 import { MrtData } from './onemapApi.ts';
 import fuzzysort from 'fuzzysort'
@@ -70,7 +70,13 @@ export default {
 						const mrtData: MrtData[] = jsonData
 						const chosenStation = fuzzysort.go(station, mrtData, { key: 'SEARCHVAL', limit: 1 })[0].obj
 						await getDirection(chatId, index, Number(chosenStation.LATITUDE), Number(chosenStation.LONGITUDE), env.API_KEY, db, env.ONEMAP_EMAIL, env.ONEMAP_PW)
-					} else if (replyText.includes())
+					} else if (replyText.includes(noteReply)) {
+						const reply = replyText.split(" ")
+						const index = Number(reply[reply.length - 1]) - 1
+						const text = payload.message.text
+						let list_data = await db.updateNote(chatId, String(index), text)
+						await sendMessage(chatId, list_data ? 'List updated' : 'Error no list found', env.API_KEY)
+					}
 				}
 				return new Response()
 			}

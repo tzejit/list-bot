@@ -111,9 +111,7 @@ export class Database {
     }
 
     async removeFromList(chatId: string, index: string) {
-        let list_id = (await this.userCollection.findOne({
-            _id: chatId
-        }))?.active_id;
+        let list_id = (await this.getUser(chatId))?.active_id;
 
         let unset_index = "list." + index
         await this.listCollection.updateOne({
@@ -199,9 +197,7 @@ export class Database {
     }
 
     async addToList(chatId: string, data: InputData) {
-        let list_id = (await this.userCollection.findOne({
-            _id: chatId
-        }))?.active_id;
+        let list_id = (await this.getUser(chatId))?.active_id;
 
         if (!list_id) {
             return null
@@ -220,9 +216,7 @@ export class Database {
 
     async markListItem(chatId: string, index: string) {
         // Can probably be done in 1 function call
-        let list_id = (await this.userCollection.findOne({
-            _id: chatId
-        }))?.active_id;
+        let list_id = (await this.getUser(chatId))?.active_id;
 
         let list_index = "list." + index + "." + UserFields.Visited
 
@@ -237,6 +231,19 @@ export class Database {
         });
 
         return true
+    }
+
+    async updateNote(chatId: string, index: string, note: string) {
+        let list_id = (await this.getUser(chatId))?.active_id;
+        let list_index = "list." + index + "." + UserFields.Note
+        let res = await this.listCollection.findOneAndUpdate({
+            _id: list_id,
+        }, {
+            $set: {
+                [list_index]: note
+            }
+        });
+        return res
     }
 
 }
