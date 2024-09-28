@@ -144,7 +144,11 @@ export default {
 						await sendMessage(chatId, 'Postal code and name needed', env.API_KEY)
 						return new Response();
 					}
-					let data: InputData = generateInputData(p, n)
+					if (p.length != 6 || p.match(/^[0-9]+$/) == null) {
+						await sendMessage(chatId, 'Format: postal code (space) name needed', env.API_KEY)
+						return new Response();
+					}
+					let data: InputData = generateInputData(p, camelCase(n))
 					const opts = generateInlineKeyboardMarkup(Cuisine, data, UserFields.Cuisine)
 					await sendMessage(chatId, cuisineText, env.API_KEY, JSON.stringify(opts));
 				} break
